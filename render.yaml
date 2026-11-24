@@ -1,0 +1,29 @@
+# Render Blueprint: Dashboard > New > Blueprint, pick this repo.
+# Creates the Django API and a Postgres database wired together.
+databases:
+  - name: taskpulse-db
+    plan: free
+    databaseName: taskpulse
+    user: taskpulse
+
+services:
+  - type: web
+    name: taskpulse-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health/
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taskpulse-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      # Set to your Vercel URL after the frontend is deployed, e.g. https://taskpulse.vercel.app
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
