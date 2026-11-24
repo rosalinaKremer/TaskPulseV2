@@ -6,6 +6,9 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    # MongoDB ObjectId, sent to the client as its 24-character hex string.
+    id = serializers.CharField(read_only=True)
+
     class Meta:
         model = User
         fields = ["id", "email", "full_name", "date_joined"]

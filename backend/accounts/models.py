@@ -41,3 +41,14 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class RevokedToken(models.Model):
+    """A refresh token that was logged out or rotated and must not be reused."""
+
+    jti = models.CharField(max_length=255, unique=True)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.jti
