@@ -51,6 +51,7 @@ class AuthFlowTests(APITestCase):
         me = self.client.get("/api/auth/me/")
         self.assertEqual(me.status_code, 200)
         self.assertEqual(me.data["email"], "ada@example.com")
+        self.assertEqual(len(me.data["id"]), 24)  # MongoDB ObjectId as hex
 
     def test_login_with_wrong_password_fails(self):
         self.register()
@@ -66,6 +67,10 @@ class AuthFlowTests(APITestCase):
         refreshed = self.client.post("/api/auth/refresh/", {"refresh": tokens["refresh"]}, format="json")
         self.assertEqual(refreshed.status_code, 200)
         new_refresh = refreshed.data["refresh"]
+
+        # The rotated-out token can't be used again.
+        reused = self.client.post("/api/auth/refresh/", {"refresh": tokens["refresh"]}, format="json")
+        self.assertEqual(reused.status_code, 401)
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refreshed.data['access']}")
         self.assertEqual(self.client.post("/api/auth/logout/", {"refresh": new_refresh}, format="json").status_code, 205)

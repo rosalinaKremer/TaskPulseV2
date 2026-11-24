@@ -10,7 +10,6 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,9 +47,9 @@ if RENDER_EXTERNAL_HOSTNAME:
 # ── Applications ────────────────────────────────────────────────────────────
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
+    "config.apps.MongoAdminConfig",
+    "config.apps.MongoAuthConfig",
+    "config.apps.MongoContentTypesConfig",
     "django.contrib.sessions",
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
@@ -58,7 +57,6 @@ INSTALLED_APPS = [
     # Third party
     "corsheaders",
     "rest_framework",
-    "rest_framework_simplejwt.token_blacklist",
     # Local
     "accounts",
 ]
@@ -95,16 +93,29 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-# ── Database ────────────────────────────────────────────────────────────────
-# DATABASE_URL (Render Postgres "Internal Database URL") in production,
-# SQLite file locally.
+# ── Database (MongoDB) ──────────────────────────────────────────────────────
+# MONGODB_URI is the full connection string, e.g. the MongoDB Atlas
+# "mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/" string.
+# MONGODB_NAME is the database inside the cluster.
+
+MONGODB_URI = os.environ.get("MONGODB_URI") or ("mongodb://localhost:27017/" if DEBUG else None)
+if not MONGODB_URI:
+    raise ImproperlyConfigured("MONGODB_URI must be set when DJANGO_DEBUG is off.")
 
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    "default": {
+        "ENGINE": "django_mongodb_backend",
+        "HOST": MONGODB_URI,
+        "NAME": os.environ.get("MONGODB_NAME", "taskpulse"),
+    }
+}
+
+# Django's built-in apps ship SQL-style migrations; these are regenerated for
+# ObjectId primary keys (python manage.py makemigrations admin auth contenttypes).
+MIGRATION_MODULES = {
+    "admin": "mongo_migrations.admin",
+    "auth": "mongo_migrations.auth",
+    "contenttypes": "mongo_migrations.contenttypes",
 }
 
 
@@ -137,7 +148,9 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "30"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get("JWT_REFRESH_DAYS", "7"))),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
+    # Rotated and logged-out refresh tokens are revoked via accounts.RevokedToken
+    # (simplejwt's own blacklist app needs integer primary keys, which MongoDB lacks).
+    "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
@@ -190,7 +203,7 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_AUTO_FIELD = "django_mongodb_backend.fields.ObjectIdAutoField"
 
 LOGGING = {
     "version": 1,

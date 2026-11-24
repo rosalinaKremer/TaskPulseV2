@@ -3,7 +3,7 @@
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/+$/, '')
 
 export type User = {
-  id: number
+  id: string
   email: string
   full_name: string
   date_joined: string

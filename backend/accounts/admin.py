@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User
+from .models import RevokedToken, User
 
 
 @admin.register(User)
@@ -18,3 +18,8 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("email", "full_name", "password1", "password2")}),
     )
+
+
+@admin.register(RevokedToken)
+class RevokedTokenAdmin(admin.ModelAdmin):
+    list_display = ["jti", "revoked_at", "expires_at"]
