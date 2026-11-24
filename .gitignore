@@ -1,0 +1,14 @@
+@"
+# Python / Django
+backend/.venv/
+backend/__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+.env.*
+
+# Frontend / Node
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+"@ | Out-File -FilePath .gitignore -Encoding utf8
